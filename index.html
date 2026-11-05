@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>3D Modeling Web — Prototype</title>
+<style>
+:root{--bg:#101216;--panel:#191d24;--panel2:#222833;--line:#303846;--text:#eef2f7;--muted:#9aa6b5;--accent:#5c9dff}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.app{height:100dvh;display:grid;grid-template-rows:52px 1fr 42px}.top{display:flex;align-items:center;gap:10px;padding:0 12px;background:#171b22;border-bottom:1px solid var(--line);z-index:2}.brand{font-weight:750;letter-spacing:.2px;white-space:nowrap}.brand span{color:var(--accent)}button,select,input{font:inherit;color:inherit}button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;cursor:pointer}button:hover{border-color:#6b91c8}button.active{background:#24446e;border-color:#477fc6}.top .spacer{flex:1}.layout{min-height:0;display:grid;grid-template-columns:64px 1fr 270px}.tools{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 5px}.tool{width:48px;height:46px;padding:4px;font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.tool b{font-size:18px;font-weight:500}.viewport{position:relative;min-width:0;min-height:0;background:#171c24}#view{width:100%;height:100%;display:block;touch-action:none}.hint{position:absolute;left:12px;top:12px;padding:8px 10px;border-radius:8px;background:#111923cc;color:#cbd5e1;font-size:12px;pointer-events:none}.right{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:13px}.section{margin-bottom:17px}.section h3{margin:0 0 10px;font-size:13px;color:#c7d2df;text-transform:uppercase;letter-spacing:.07em}.row{display:flex;gap:7px;align-items:center;margin:7px 0}.row label{width:54px;color:var(--muted);font-size:12px}.row input[type=number]{width:64px;min-width:0;background:#10151c;border:1px solid var(--line);border-radius:6px;padding:7px}.row input[type=color]{width:100%;height:34px;background:none;border:0}.full{width:100%}.objects{display:flex;flex-direction:column;gap:5px}.obj{display:flex;align-items:center;gap:8px;text-align:left;width:100%;padding:8px}.obj.selected{border-color:var(--accent);background:#20334b}.obj small{color:var(--muted);margin-left:auto}.bottom{display:flex;align-items:center;gap:14px;padding:0 12px;background:#171b22;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.bottom span:last-child{margin-left:auto}.mobile-add{display:none}
+@media(max-width:760px){.layout{grid-template-columns:54px 1fr}.right{position:absolute;right:0;top:52px;bottom:42px;width:min(82vw,290px);z-index:3;box-shadow:-10px 0 30px #0008;transform:translateX(100%);transition:transform .2s}.right.open{transform:translateX(0)}.tool{width:42px;height:43px}.brand{font-size:13px}.top button{padding:7px 8px;font-size:12px}.hint{font-size:11px}.mobile-add{display:block}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand">3D <span>MODELING</span> WEB</div><button id="newBtn">Новый</button><button id="saveBtn">Сохранить</button><button id="exportBtn">Экспорт GLB</button><div class="spacer"></div><button id="panelBtn" class="mobile-add">Свойства ☰</button></header>
+<div class="layout">
+<nav class="tools">
+<button class="tool active" data-mode="translate"><b>↔</b>Двигать</button>
+<button class="tool" data-mode="rotate"><b>⟳</b>Вращать</button>
+<button class="tool" data-mode="scale"><b>⤢</b>Размер</button>
+<div style="height:1px;background:var(--line);width:80%;margin:4px"></div>
+<button class="tool" id="cubeBtn"><b>▧</b>Куб</button>
+<button class="tool" id="sphereBtn"><b>●</b>Сфера</button>
+<button class="tool" id="cylBtn"><b>⬭</b>Цилиндр</button>
+<button class="tool" id="deleteBtn"><b>⌫</b>Удалить</button>
+</nav>
+<main class="viewport"><canvas id="view"></canvas><div class="hint">Перетаскивай для вращения камеры · Колёсико — масштаб · Нажми объект для выбора</div></main>
+<aside class="right" id="side">
+<div class="section"><h3>Сцена</h3><div class="objects" id="objects"></div></div>
+<div class="section"><h3>Добавить объект</h3><div class="row"><button class="full" id="addCube">＋ Куб</button><button class="full" id="addSphere">＋ Сфера</button></div><div class="row"><button class="full" id="addCylinder">＋ Цилиндр</button></div></div>
+<div class="section"><h3>Положение</h3><div id="transform">
+<div class="row"><label>X</label><input type="number" step=".1" id="px"><label>Y</label><input type="number" step=".1" id="py"><label>Z</label><input type="number" step=".1" id="pz"></div>
+<div class="row"><label>Вращ. X</label><input type="number" step="5" id="rx"><label>Y</label><input type="number" step="5" id="ry"><label>Z</label><input type="number" step="5" id="rz"></div>
+<div class="row"><label>Размер</label><input type="number" step=".1" min=".05" id="sx"><input type="number" step=".1" min=".05" id="sy"><input type="number" step=".1" min=".05" id="sz"></div>
+</div></div>
+<div class="section"><h3>Материал</h3><div class="row"><label>Цвет</label><input type="color" id="color" value="#5c9dff"></div></div>
+<div class="section"><h3>Вид</h3><button class="full" id="gridBtn">Показать / скрыть сетку</button></div>
+</aside>
+</div>
+<footer class="bottom"><span id="status">Готово</span><span>Прототип · браузерный 3D-редактор</span><span id="count">0 объектов</span></footer>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {TransformControls} from 'three/addons/controls/TransformControls.js';
+import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
+const canvas=document.querySelector('#view');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(canvas.clientWidth,canvas.clientHeight,false); renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#171c24');
+const camera=new THREE.PerspectiveCamera(45,1,.1,1000); camera.position.set(6,5,8);
+const orbit=new OrbitControls(camera,renderer.domElement); orbit.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0xffffff,0x586070,2));
+const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(5,9,6);scene.add(light);
+const grid=new THREE.GridHelper(30,30,0x59677a,0x303b4a);scene.add(grid);
+const axes=new THREE.AxesHelper(2);scene.add(axes);
+const gizmo=new TransformControls(camera,renderer.domElement);scene.add(gizmo.getHelper());gizmo.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);
+const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let selected=null;let serial=1;const objects=[];
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(canvas);
+function mat(color='#5c9dff'){return new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.08})}
+function add(type){let geo;if(type==='Куб')geo=new THREE.BoxGeometry(1,1,1);if(type==='Сфера')geo=new THREE.SphereGeometry(.65,32,20);if(type==='Цилиндр')geo=new THREE.CylinderGeometry(.55,.55,1.2,32);
+const mesh=new THREE.Mesh(geo,mat());mesh.position.y=.6;mesh.name=type+' '+serial++;scene.add(mesh);objects.push(mesh);select(mesh);refresh();status('Добавлен: '+mesh.name)}
+function select(obj){selected=obj;gizmo.detach();if(obj)gizmo.attach(obj);refresh();syncProps()}
+function refresh(){const list=document.querySelector('#objects');list.innerHTML='';objects.forEach(o=>{const b=document.createElement('button');b.className='obj'+(o===selected?' selected':'');b.innerHTML=`<span>◈</span><span>${o.name}</span><small>●</small>`;b.onclick=()=>select(o);list.append(b)});document.querySelector('#count').textContent=objects.length+' объектов'}
+function status(s){document.querySelector('#status').textContent=s}
+function syncProps(){if(!selected)return;const v=(id,n)=>document.querySelector('#'+id).value=n;v('px',selected.position.x.toFixed(2));v('py',selected.position.y.toFixed(2));v('pz',selected.position.z.toFixed(2));v('rx',THREE.MathUtils.radToDeg(selected.rotation.x).toFixed(1));v('ry',THREE.MathUtils.radToDeg(selected.rotation.y).toFixed(1));v('rz',THREE.MathUtils.radToDeg(selected.rotation.z).toFixed(1));v('sx',selected.scale.x.toFixed(2));v('sy',selected.scale.y.toFixed(2));v('sz',selected.scale.z.toFixed(2));v('color','#'+selected.material.color.getHexString())}
+function bind(id,fn){document.querySelector('#'+id).addEventListener('change',e=>{if(!selected)return;fn(Number(e.target.value));syncProps()})}
+[['px',v=>selected.position.x=v],['py',v=>selected.position.y=v],['pz',v=>selected.position.z=v],['rx',v=>selected.rotation.x=THREE.MathUtils.degToRad(v)],['ry',v=>selected.rotation.y=THREE.MathUtils.degToRad(v)],['rz',v=>selected.rotation.z=THREE.MathUtils.degToRad(v)],['sx',v=>selected.scale.x=Math.max(.05,v)],['sy',v=>selected.scale.y=Math.max(.05,v)],['sz',v=>selected.scale.z=Math.max(.05,v)]].forEach(([id,fn])=>bind(id,fn));
+document.querySelector('#color').addEventListener('input',e=>{if(selected)selected.material.color.set(e.target.value)});
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{gizmo.setMode(b.dataset.mode);document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b))});
+function addButtons(){[['cubeBtn','addCube','Куб'],['sphereBtn','addSphere','Сфера'],['cylBtn','addCylinder','Цилиндр']].forEach(([a,b,t])=>{document.getElementById(a).onclick=()=>add(t);document.getElementById(b).onclick=()=>add(t)})}addButtons();
+document.querySelector('#deleteBtn').onclick=()=>{if(!selected)return;scene.remove(selected);objects.splice(objects.indexOf(selected),1);selected=null;gizmo.detach();refresh();status('Объект удалён')};
+document.querySelector('#gridBtn').onclick=()=>grid.visible=!grid.visible;
+document.querySelector('#panelBtn').onclick=()=>document.querySelector('#side').classList.toggle('open');
+document.querySelector('#newBtn').onclick=()=>{objects.slice().forEach(o=>scene.remove(o));objects.length=0;select(null);refresh();status('Новая сцена')};
+document.querySelector('#saveBtn').onclick=()=>{const data=objects.map(o=>({name:o.name,type:o.geometry.type,position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),color:'#'+o.material.color.getHexString()}));const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});download(blob,'my-scene.json');status('Сцена сохранена в JSON')};
+document.querySelector('#exportBtn').onclick=()=>new GLTFExporter().parse(scene,result=>{const blob=result instanceof ArrayBuffer?new Blob([result],{type:'model/gltf-binary'}):new Blob([JSON.stringify(result)],{type:'application/json'});download(blob,result instanceof ArrayBuffer?'model.glb':'model.gltf')},{binary:true});
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+canvas.addEventListener('pointerdown',e=>{if(gizmo.dragging)return;const r=canvas.getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(pointer,camera);const hits=ray.intersectObjects(objects);if(hits.length)select(hits[0].object)});
+function animate(){requestAnimationFrame(animate);orbit.update();renderer.render(scene,camera)}resize();animate();
+</script>
+</body></html>
